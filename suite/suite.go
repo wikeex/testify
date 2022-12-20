@@ -115,7 +115,7 @@ func (suite *Suite) Run(name string, subtest func()) bool {
 
 // Run takes a testing suite and runs all of the tests attached
 // to it.
-func Run(t *testing.T, suite TestingSuite) {
+func Run(t *testing.T, suite TestingSuite, runTimes int, methodNames ...string) {
 	defer recoverAndFailOnPanic(t)
 
 	suite.SetT(t)
@@ -128,7 +128,7 @@ func Run(t *testing.T, suite TestingSuite) {
 		stats = newSuiteInformation()
 	}
 
-	tests := []testing.InternalTest{}
+	var tests []testing.InternalTest
 	methodFinder := reflect.TypeOf(suite)
 	suiteName := methodFinder.Elem().Name()
 
@@ -142,6 +142,18 @@ func Run(t *testing.T, suite TestingSuite) {
 		}
 
 		if !ok {
+			continue
+		}
+
+		// 匹配指定的方法
+		continueFlag := true
+		for _, name := range methodNames {
+			if method.Name == name {
+				continueFlag = false
+				break
+			}
+		}
+		if continueFlag {
 			continue
 		}
 
@@ -197,7 +209,10 @@ func Run(t *testing.T, suite TestingSuite) {
 				method.Func.Call([]reflect.Value{reflect.ValueOf(suite)})
 			},
 		}
-		tests = append(tests, test)
+		// 运行指定次数
+		for i := 0; i < runTimes; i++ {
+			tests = append(tests, test)
+		}
 	}
 	if suiteSetupDone {
 		defer func() {
